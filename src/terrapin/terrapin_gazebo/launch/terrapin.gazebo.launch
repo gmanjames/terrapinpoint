@@ -1,0 +1,43 @@
+<launch>
+    
+    <!--  -->
+    <!-- These are values that can be passed via command line to this launch file, -->
+    <!--    for example, paused:=true -->
+    <!--  paused       : start the simulation in a paused state -->
+    <!--  use_sim_time : tell ROS nodes to get the time published by Gazebo -->
+    <!--  gui          : launch the user interface -->
+    <!--  headless     : disable all rendering (does not work with gui:=true) -->
+    <!--  debug        : start gzserver in debug mode using gdb -->
+    <!--  verbose      : tell gazebo to print extra information -->
+    <!--  world        : the world file to pass to Gazebo for startup -->
+    <!--  -->
+    <arg name="paused"       default="true"  />
+    <arg name="use_sim_time" default="true"  />
+    <arg name="gui"          default="true"  />
+    <arg name="headless"     default="false" />
+    <arg name="debug"        default="false" />
+    <arg name="verbose"      default="false" />
+
+    <!--  -->
+    <!-- Launch the robot_description node -->
+    <!--  -->
+    <include file="$(find terrapin_description)/launch/terrapin.model.launch" ns="/" pass_all_args="true" />
+
+    <!--  -->
+    <!-- Start with the empty_world.launch file -->
+    <!--  -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name"   value="$(find terrapin_gazebo)/worlds/terrapin.cones.world"/>
+        <arg name="paused"       value="$(arg paused)"       />
+        <arg name="use_sim_time" value="$(arg use_sim_time)" />
+        <arg name="gui"          value="$(arg gui)"          />
+        <arg name="headless"     value="$(arg headless)"     />
+        <arg name="debug"        value="$(arg debug)"        />
+        <arg name="verbose"      value="$(arg verbose)"      />
+    </include>
+    
+    <!-- Spawn a robot into Gazebo from the ROS Parameter Server -->
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+          args="-param terrapin_description -urdf -model terrapin" />
+    
+</launch>
