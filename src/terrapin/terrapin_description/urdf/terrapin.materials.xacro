@@ -39,4 +39,36 @@
   <material name="white">
     <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
+
+  <!-- Gazebo Materials -->
+  <xacro:macro name="gz_black_material" params="name">
+    <gazebo reference="${name}">
+      <material>Gazebo/FlatBlack</material>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="gz_grey_material" params="name">
+    <gazebo reference="${name}">
+      <material>Gazebo/Grey</material>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="gz_white_material" params="name">
+    <gazebo reference="${name}">
+      <material>Gazebo/White</material>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="gz_blue_material" params="name">
+    <gazebo reference="${name}">
+      <material>Gazebo/Blue</material>
+    </gazebo>
+  </xacro:macro>
+  
+  <xacro:macro name="gz_red_material" params="name">
+    <gazebo reference="${name}">
+      <material>Gazebo/Red</material>
+    </gazebo>
+  </xacro:macro>
+
 </robot>

@@ -15,7 +15,11 @@
     <origin xyz="0 0 0.010" rpy="0 0 0"/>
   </joint>
 
+
+  <!-- Base Link -->
+
   <link name="base_link">
+    <xacro:gz_grey_material name="base_link"/>
     <visual>
       <origin xyz="-0.064 0 0.0" rpy="0 0 0"/>
       <geometry>
@@ -37,6 +41,9 @@
                izz="0.01" />
     </inertial>
   </link>
+
+
+  <!-- Wheels -->
 
   <joint name="wheel_left_joint" type="continuous">
     <parent link="base_link"/>
@@ -98,6 +105,9 @@
     </inertial>
   </link>
 
+
+  <!-- Casters -->
+
   <joint name="caster_back_right_joint" type="fixed">
     <parent link="base_link"/>
     <child link="caster_back_right_link"/>
@@ -144,6 +154,9 @@
     </inertial>
   </link>
 
+
+  <!-- IMU -->
+
   <joint name="imu_joint" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
@@ -157,6 +170,9 @@
     <child link="base_scan"/>
     <origin xyz="-0.064 0 0.121" rpy="0 0 0"/>
   </joint>
+
+
+  <!-- Base Scan -->
 
   <link name="base_scan">
     <visual>
@@ -180,6 +196,9 @@
                izz="0.001" />
     </inertial>
   </link>
+
+
+  <!-- Camera -->
 
   <joint name="camera_joint" type="fixed">
     <origin xyz="0.064 -0.065 0.094" rpy="0 0 0"/>
