@@ -1,0 +1,4 @@
+<?xml version="1.0" ?>
+<robot name="terrapin_macros" xmlns:xacro="http://ros.org/wiki/xacro">
+
+</robot>
