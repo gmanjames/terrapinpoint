@@ -6,15 +6,40 @@ from __future__ import division
 import rospy
 import numpy as np
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
 
 
-def im_callback(im_dat):
-    pass
+'''
+Author: Garren Ijames
 
-def detector():
-    rospy.init_node('terrapin_detector', anonymous=True)
+Detector.py: A class for processing depth image data
+'''
+class Detector:
 
-    rospy.Subscriber('', Image, im_callback)
+    def __init__(self):
+
+        # IDK what this is for
+        self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
+
+        self.startup()
+
+
+    def startup(self):
+        rospy.init_node('terrapin_detector', anonymous=True)
+
+        rospy.Subscriber('/camera/depth/image_raw', Image, self.process)
+
+        rospy.spin()
+
+
+    def process(self, im_dat):
+        rospy.loginfo(im_dat.data)
+
+
+
+
+
+
 
 def run_detector_publisher():
 
@@ -24,10 +49,10 @@ def run_detector_publisher():
 
 
 if __name__ == '__main__':
-    detector()
+    detector = Detector()
 
-    try:
-        run_orange_publisher()
-    except rospy.ROSInteruptException:
-        pass
+    #try:
+    #    run_orange_publisher()
+    #except rospy.ROSInteruptException:
+    #    pass
 
