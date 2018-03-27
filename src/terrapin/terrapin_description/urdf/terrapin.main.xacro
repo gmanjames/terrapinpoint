@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <robot name="terrapin" xmlns:xacro="http://ros.org/wiki/xacro">
-  
+
   <!-- Include Files -->
   <xacro:include filename="$(find terrapin_description)/urdf/terrapin.properties.xacro"/>
   <xacro:include filename="$(find terrapin_description)/urdf/terrapin.materials.xacro"/>

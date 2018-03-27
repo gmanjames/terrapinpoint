@@ -1,5 +1,5 @@
 <launch>
-    
+
     <!--  -->
     <!-- These are values that can be passed via command line to this launch file, -->
     <!--    for example, paused:=true -->
@@ -35,9 +35,12 @@
         <arg name="debug"        value="$(arg debug)"        />
         <arg name="verbose"      value="$(arg verbose)"      />
     </include>
-    
+
     <!-- Spawn a robot into Gazebo from the ROS Parameter Server -->
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
           args="-param terrapin_description -urdf -model terrapin" />
-    
+
+    <!-- Add a static transform publisher for viewing the point cloud data from camera -->
+    <node pkg="tf" type="static_transform_publisher" name="point_cloud_broadcaster" args="1 0 0 0 0 0 1 base_link camera_link 100" />
+
 </launch>
