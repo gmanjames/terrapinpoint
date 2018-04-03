@@ -7,10 +7,9 @@
 #include <pcl/filters/voxel_grid.h>
 
 ros::Publisher pub;
+float filter_density = 0.05;
 
-void
-cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
-{
+void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
   // Container for original & filtered data
   pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
   pcl::PCLPointCloud2ConstPtr cloudPtr(cloud);
@@ -22,7 +21,7 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   // Perform the actual filtering
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
   sor.setInputCloud (cloudPtr);
-  sor.setLeafSize (0.1, 0.1, 0.1);
+  sor.setLeafSize (filter_density, filter_density, filter_density);
   sor.filter (cloud_filtered);
 
   // Convert to ROS data type
@@ -33,18 +32,16 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
   pub.publish (output);
 }
 
-int
-main (int argc, char** argv)
-{
+int main (int argc, char** argv) {
   // Initialize ROS
-  ros::init (argc, argv, "my_pcl_tutorial");
+  ros::init (argc, argv, "terrapin_pcl");
   ros::NodeHandle nh;
 
   // Create a ROS subscriber for the input point cloud
   ros::Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
 
   // Create a ROS publisher for the output point cloud
-  pub = nh.advertise<sensor_msgs::PointCloud2> ("output", 1);
+  pub = nh.advertise<sensor_msgs::PointCloud2> ("point_clouds/filtered", 1);
 
   // Spin
   ros::spin ();
