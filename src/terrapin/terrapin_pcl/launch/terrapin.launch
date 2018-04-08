@@ -24,9 +24,11 @@
 
     <!-- PCL Node Arguments -->
     <!-- Original: simply subscribes to the input data and publishes under a new topic -->
-    <arg name="original"  default="true"  />
+    <arg name="original"  default="false" />
     <!-- Filter: changes the PointCloud2 data density -->
     <arg name="filter"    default="true" />
+    <!-- Keypoint Extractor: Gets keypoints from PointCloud2 data -->
+    <arg name="keypoints" default="true"  />
 
     <!--  -->
     <!-- Launch the robot_description node -->
@@ -72,6 +74,12 @@
     <!-- Launch PCL filter node -->
     <group if="$(arg filter)">
       <node name="pcl_filter" pkg="terrapin_pcl" type="filter"
+            args="input:=$(arg subscripe_to)" />
+    </group>
+
+    <!-- Launch PCL keypoints node -->
+    <group if="$(arg keypoints)">
+      <node name="pcl_keypoints" pkg="terrapin_pcl" type="keypoints"
             args="input:=$(arg subscripe_to)" />
     </group>
 
