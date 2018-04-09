@@ -32,21 +32,18 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
   pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
   pcl::PCLPointCloud2ConstPtr cloudPtr(cloud);
   pcl::PCLPointCloud2 keypoints;
+  std_msgs::String msg;
 
   // Convert to PCL data type
   pcl_conversions::toPCL(*cloud_msg, *cloud);
 
+  // Publish message
+  std::stringstream inputMsg;
+  inputMsg << "Input   Height: " << cloud->height << "  Width: " << cloud->width;
+  msg.data = inputMsg.str();
+  msgPub.publish (msg);
 
-  // Log input size
-  std_msgs::String msg1;
-  std::stringstream ss1;
-  ss1 << "Input   Height: " << cloud->height << "  width: " << cloud->width;
-  msg1.data = ss1.str();
-
-  msgPub.publish (msg1);
-
-
-  // Extract keypoints
+  // EXTRACT KEYPOINTS
 
   // Convert to PointXYZ cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>);
@@ -80,27 +77,23 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
   sift.setInputCloud(cloud_normals);
   sift.compute(result);
 
-
-
-  // Convert to ROS data type
+  // Convert to ROS data type and publish
   pcl::toPCLPointCloud2(result, keypoints);
   sensor_msgs::PointCloud2 output;
   pcl_conversions::fromPCL(keypoints, output);
   output.header.frame_id = "camera_link";
-
-  // Publish the data
-  std_msgs::String msg;
-  std::stringstream ss2;
-  ss2 << "Results: " << result.points.size();
-  msg.data = ss2.str();
-  msgPub.publish (msg);
-
-  std::stringstream ss3;
-  ss3 << "Output    Height: " << keypoints.height << "   Width: " << keypoints.width;
-  msg.data = ss3.str();
-  msgPub.publish (msg);
-
   keypointPub.publish (output);
+
+  // Publish messages
+  std::stringstream resultsMsg;
+  resultsMsg << "Results: " << result.points.size();
+  msg.data = resultsMsg.str();
+  msgPub.publish (msg);
+
+  std::stringstream outputMsg;
+  outputMsg << "Output   Height: " << keypoints.height << "  Width: " << keypoints.width;
+  msg.data = outputMsg.str();
+  msgPub.publish (msg);
 }
 
 
@@ -113,8 +106,8 @@ int main (int argc, char** argv) {
   ros::Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
 
   // Create a ROS publisher for the output point cloud
-  msgPub = nh.advertise<std_msgs::String> ("point_clouds/message_keypoints", 1000);
-  keypointPub = nh.advertise<sensor_msgs::PointCloud2> ("point_clouds/keypoints", 50);
+  msgPub = nh.advertise<std_msgs::String> ("point_clouds/message_keypoints", 1);
+  keypointPub = nh.advertise<sensor_msgs::PointCloud2> ("point_clouds/keypoints", 1);
 
   // Spin
   ros::spin ();

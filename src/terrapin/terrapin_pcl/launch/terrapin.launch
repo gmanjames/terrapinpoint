@@ -75,12 +75,12 @@
     <group if="$(arg filter)">
       <node name="pcl_filter" pkg="terrapin_pcl" type="filter"
             args="input:=$(arg subscripe_to)" />
-    </group>
 
-    <!-- Launch PCL keypoints node -->
-    <group if="$(arg keypoints)">
-      <node name="pcl_keypoints" pkg="terrapin_pcl" type="keypoints"
-            args="input:=$(arg subscripe_to)" />
+      <!-- Launch PCL keypoints node -->
+      <group if="$(arg keypoints)">
+        <node name="pcl_keypoints" pkg="terrapin_pcl" type="keypoints"
+              args="input:=/point_clouds/filtered" />
+      </group>
     </group>
 
 </launch>
