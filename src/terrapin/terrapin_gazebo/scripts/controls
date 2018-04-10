@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+from tkinter import Tk, Label, Button
+
+class Controls:
+
+    def __init__(self, master):
+        self.master = master
+
+        master.title("Terrapin Controls")
+
+        # basic label
+        self.label = Label(master, text="Test: Initial GUI setup")
+        self.label.pack()
+
+        # basic button test
+        self.button = Button(master, text="Function", command=self.btn_cb)
+        self.button.pack()
+
+        # exit gui window
+        self.exit_button = Button(master, text="Close", command=master.quit)
+        self.exit_button.pack()
+
+
+    def btn_cb(self):
+        print("Function called!")
+
+
+    def startup(self):
+        self.master.mainloop()
+
+
+if __name__ == '__main__':
+    # Pass in root tk element
+    controls = Controls( Tk() )
+
+    controls.startup()
+
