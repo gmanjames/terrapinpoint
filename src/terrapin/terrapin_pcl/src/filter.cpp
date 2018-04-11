@@ -7,7 +7,7 @@
 #include <pcl/filters/voxel_grid.h>
 
 ros::Publisher pub;
-float filter_density = 0.05;
+float filter_density = 0.01;
 
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
   // Container for original & filtered data

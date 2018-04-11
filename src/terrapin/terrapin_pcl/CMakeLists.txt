@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   pcl_ros
   roscpp
+  std_msgs
   sensor_msgs
 )
 
@@ -137,8 +138,9 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/terrapin_pcl_node.cpp)
 
 # PointCloud executables
-add_executable(filter src/filter.cpp)
 add_executable(original src/original.cpp)
+add_executable(filter src/filter.cpp)
+add_executable(keypoints src/keypoint_extractor.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,8 +158,9 @@ add_executable(original src/original.cpp)
   # ${catkin_LIBRARIES}
 # )
 
-target_link_libraries(filter ${catkin_LIBRARIES})
 target_link_libraries(original ${catkin_LIBRARIES})
+target_link_libraries(filter ${catkin_LIBRARIES})
+target_link_libraries(keypoints ${catkin_LIBRARIES})
 
 #############
 ## Install ##
