@@ -24,11 +24,13 @@
 
     <!-- PCL Node Arguments -->
     <!-- Original: simply subscribes to the input data and publishes under a new topic -->
-    <arg name="original"  default="false" />
+    <arg name="run_original"  default="false" />
     <!-- Filter: changes the PointCloud2 data density -->
-    <arg name="filter"    default="true" />
+    <arg name="run_filter"    default="false" />
     <!-- Keypoint Extractor: Gets keypoints from PointCloud2 data -->
-    <arg name="keypoints" default="true"  />
+    <arg name="run_keypoints" default="false"  />
+    <!-- Registration: Compares point clouds -->
+    <arg name="run_registration" default="true"  />
 
     <!--  -->
     <!-- Launch the robot_description node -->
@@ -66,21 +68,27 @@
     <!-- PCL NODE LAUNCHES BELOW -->
 
     <!-- Launch PCL original node -->
-    <group if="$(arg original)">
+    <group if="$(arg run_original)">
       <node name="pcl_original" pkg="terrapin_pcl" type="original"
             args="input:=$(arg subscripe_to)" />
     </group>
 
     <!-- Launch PCL filter node -->
-    <group if="$(arg filter)">
+    <group if="$(arg run_filter)">
       <node name="pcl_filter" pkg="terrapin_pcl" type="filter"
             args="input:=$(arg subscripe_to)" />
 
       <!-- Launch PCL keypoints node -->
-      <group if="$(arg keypoints)">
+      <group if="$(arg run_keypoints)">
         <node name="pcl_keypoints" pkg="terrapin_pcl" type="keypoints"
               args="input:=/point_clouds/filtered" />
       </group>
+    </group>
+
+    <!-- Launch PCL registration node -->
+    <group if="$(arg run_registration)">
+      <node name="pcl_registration" pkg="terrapin_pcl" type="registration"
+            args="input:=$(arg subscripe_to)" />
     </group>
 
 </launch>
