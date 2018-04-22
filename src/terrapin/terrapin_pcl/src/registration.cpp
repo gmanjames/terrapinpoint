@@ -16,7 +16,6 @@
 #include <pcl/registration/correspondence_rejection_sample_consensus.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 
-
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
@@ -24,16 +23,26 @@ using namespace pcl;
 using namespace pcl::registration;
 using namespace pcl_conversions;
 
-// GLOBALS
+// ********************** GLOBALS ***********************************
 
 // Ros Publishers
-Publisher msgPub;
-std_msgs::String msg;
-Publisher keypointPub;
+// String messages
+Publisher regMsgPub;
+stringstream ssMsg;
+std_msgs::String rosMsg;
+// PointCloud2 data
+Publisher originalCloudPub;
+Publisher filteredCloudPub;
+Publisher currentKeypointsPub;
+Publisher previousKeypointsPub;
+// Velocity data
+Publisher imuVelocityPub;
+Publisher calculatedVelocityPub;
 
 // Variables
 const float filter_density = 0.01;
 const int keypoint_threshold = 25;
+const double cloud_resolution = 0.006;
 // SIFT Parameters
 // const float min_scale = 0.01f;
 // const int n_octaves = 3;
@@ -57,7 +66,21 @@ CorrespondenceRejectorSampleConsensus<PointXYZRGB> reject;
 TransformationEstimationSVD<PointXYZRGB, PointXYZRGB> trans_est;
 
 
+// ********************** FUNCTIONS ***********************************
+
+
+void publishRegMsg () {
+  // Publish stringstream and clear it's contents
+  rosMsg.data = ssMsg.str();
+  regMsgPub.publish(rosMsg);
+  ssMsg.str(string());
+}
+
+
 void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
+  // Publish the original cloud
+  originalCloudPub.publish(cloud_msg);
+
   // FILTER THE POINT CLOUD
   PCLPointCloud2* cloud = new PCLPointCloud2;
   toPCL(*cloud_msg, *cloud);
@@ -67,22 +90,23 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   voxel_grid.setLeafSize(filter_density, filter_density, filter_density);
   voxel_grid.filter(cloud_filtered);
 
-  // Publish Message: Input data
-  stringstream inputMsg;
-  inputMsg << "INPUT    Height: " << cloud->height << "  Width: " << cloud->width;
-  msg.data = inputMsg.str();
-  msgPub.publish (msg);
-
   // Convert cloud to PointXYZRGB
   PointCloud<PointXYZRGB>::Ptr cloud_xyz (new PointCloud<PointXYZRGB>);
   fromPCLPointCloud2(cloud_filtered, *cloud_xyz);
-  double cloud_resolution (0.0058329);
+
+  // Publish Message: Input data
+  ssMsg << "INPUT    Height: " << cloud->height << "  Width: " << cloud->width;
+  publishRegMsg();
 
   // Publish Message: Filtered cloud data
-  stringstream filterMsg;
-  filterMsg << "FILTERED POINTS: " << cloud_xyz->points.size();
-  msg.data = filterMsg.str();
-  msgPub.publish (msg);
+  ssMsg << "FILTERED POINTS: " << cloud_xyz->points.size();
+  publishRegMsg();
+
+  // Publish filtered point cloud
+  PointCloud2 filteredOutput;
+  fromPCL(cloud_filtered, filteredOutput);
+  filteredOutput.header = cloud_msg->header;
+  filteredCloudPub.publish(filteredOutput);
 
 
   // EXTRACT KEYPOINTS
@@ -92,12 +116,12 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   // ISS 3D
   iss3d.setInputCloud(cloud_xyz);
   iss3d.setSearchMethod(keypoint_tree);
-  iss3d.setSalientRadius (6 * cloud_resolution);
-  iss3d.setNonMaxRadius (4 * cloud_resolution);
-  iss3d.setThreshold21 (0.975);
-  iss3d.setThreshold32 (0.975);
-  iss3d.setMinNeighbors (5);
-  iss3d.setNumberOfThreads (1);
+  iss3d.setSalientRadius(6.0 * cloud_resolution);
+  iss3d.setNonMaxRadius(4.0 * cloud_resolution);
+  iss3d.setThreshold21(0.975);
+  iss3d.setThreshold32(0.975);
+  iss3d.setMinNeighbors(5);
+  iss3d.setNumberOfThreads(1);
   iss3d.compute(*current_keypoints);
 
   // SIFT Feature extractor
@@ -114,10 +138,8 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   // uniform.compute(current_keypoints);
 
   // Publish Message: Keypoints
-  stringstream keypointsMsg;
-  keypointsMsg << "KEYPOINTS FOUND: " << current_keypoints->points.size();
-  msg.data = keypointsMsg.str();
-  msgPub.publish (msg);
+  ssMsg << "KEYPOINTS FOUND: " << current_keypoints->points.size();
+  publishRegMsg();
 
   // Check if there are enough keypoints before continuing
   if (current_keypoints->points.size() >= keypoint_threshold) {
@@ -140,15 +162,12 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
     // fpfh_est.setRadiusSearch(1); // 1m
     // fpfh_est.compute(*current_descriptors);
 
-
     // Check if previous cloud exists before continuing
     if (!previousExists) {
 
       // Publish Message: pervious cloud not found
-      stringstream noPrevious;
-      noPrevious << "No Previous Cloud Data Was Found.........";
-      msg.data = noPrevious.str();
-      msgPub.publish (msg);
+      ssMsg << "No Previous Cloud Data Was Found...";
+      publishRegMsg();
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
@@ -156,18 +175,14 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       previousExists = true;
 
       // Publish Message: pervious cloud set
-      stringstream setMsg;
-      setMsg << "Previous Cloud Set.";
-      msg.data = setMsg.str();
-      msgPub.publish (msg);
+      ssMsg << "Previous Cloud Set";
+      publishRegMsg();
 
     } else {
 
       // Publish Message: Previous cloud found
-      stringstream foundPrevious;
-      foundPrevious << "Previous Cloud Found!!!";
-      msg.data = foundPrevious.str();
-      msgPub.publish (msg);
+      ssMsg << "Previous Cloud Found!";
+      publishRegMsg();
 
       // ESTIMATE CORRESPONDENCE
       CorrespondencesPtr all_correspondences (new Correspondences);
@@ -186,33 +201,34 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
 
       // EXTIMATE TRANSFORMATION
       Eigen::Matrix4f transform;
-      trans_est.estimateRigidTransformation (*current_keypoints, *previous_keypoints, *good_correspondences, transform);
+      trans_est.estimateRigidTransformation(*current_keypoints, *previous_keypoints, *good_correspondences, transform);
 
       // Publish Message: Transformation
-      stringstream resultsMsg;
-      resultsMsg << "TRANSFORMATION: " << transform;
-      msg.data = resultsMsg.str();
-      msgPub.publish (msg);
+      ssMsg << "TRANSFORMATION: " << transform;
+      publishRegMsg();
+
+      // Publish keypoint point clouds
+      PCLPointCloud2 currKeypoints;
+      PCLPointCloud2 prevKeypoints;
+      toPCLPointCloud2(*current_keypoints, currKeypoints);
+      toPCLPointCloud2(*previous_keypoints, prevKeypoints);
+      PointCloud2 currOutput;
+      PointCloud2 prevOutput;
+      fromPCL(currKeypoints, currOutput);
+      fromPCL(prevKeypoints, prevOutput);
+      currOutput.header = cloud_msg->header;
+      prevOutput.header = cloud_msg->header;
+      currentKeypointsPub.publish(currOutput);
+      previousKeypointsPub.publish(prevOutput);
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
       previous_descriptors->swap(*current_descriptors);
     }
-
-    // Convert keypoint cloud ROS data type and publish
-    PCLPointCloud2 currKeypoints;
-    toPCLPointCloud2(*current_keypoints, currKeypoints);
-    PointCloud2 output;
-    fromPCL(currKeypoints, output);
-    output.header.frame_id = "camera_link";
-    keypointPub.publish(output);
   }
-
   // Publish Message: Done
-  stringstream doneMsg;
-  doneMsg << "------------------------------------------------";
-  msg.data = doneMsg.str();
-  msgPub.publish (msg);
+  ssMsg << "------------------------------------------------";
+  publishRegMsg();
 }
 
 
@@ -221,12 +237,15 @@ int main (int argc, char** argv) {
   ros::init (argc, argv, "terrapin_pcl");
   NodeHandle nh;
 
-  // Create a ROS subscriber for the input point cloud
+  // Create ROS Subscribers
   Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
 
-  // Create a ROS publisher for the output point cloud
-  msgPub = nh.advertise<std_msgs::String> ("point_clouds/message_keypoints", 1);
-  keypointPub = nh.advertise<PointCloud2> ("point_clouds/keypoints", 1);
+  // Create ROS Publishers
+  regMsgPub = nh.advertise<std_msgs::String> ("terrapin/registration/messages", 1);
+  originalCloudPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/original", 1);
+  filteredCloudPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/filtered", 1);
+  currentKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/current_keypoints", 1);
+  previousKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/previous_keypoints", 1);
 
   // Spin
   ros::spin ();
