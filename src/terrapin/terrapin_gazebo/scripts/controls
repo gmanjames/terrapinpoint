@@ -1,33 +1,94 @@
 #!/usr/bin/env python
 
-from tkinter import Tk, Label, Button
+import rospy
+import ttk
+from Tkinter import *
+
+from geometry_msgs.msg import Twist
+
 
 class Controls:
 
     def __init__(self, master):
+        
+        # Ros publisher for velocity message
+        self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+        self.current_linear  = 0.0
+        self.current_angular = 0.0
+
+        # Main window frame
         self.master = master
 
         master.title("Terrapin Controls")
 
-        # basic label
-        self.label = Label(master, text="Test: Initial GUI setup")
-        self.label.pack()
+        content  = ttk.Frame(master)
+        content.grid(column=0, row=0)
 
-        # basic button test
-        self.button = Button(master, text="Function", command=self.btn_cb)
-        self.button.pack()
+        btnFrame = ttk.Frame(content, borderwidth=5,
+                relief="solid", padding="7 7 7 7")
+        btnFrame.grid(column=0, row=0, columnspan=3, rowspan=2)
+
+        # Increase linear velocity button
+        self.up_button = ttk.Button(btnFrame, text="Up",
+                command=self.__up_btn_cb)
+        self.up_button.grid(column=2, row=0,
+                columnspan=1)
+
+        # Decrease linear velocity button
+        self.dn_button = ttk.Button(btnFrame, text="Down",
+                command=self.__dn_btn_cb)
+        self.dn_button.grid(column=2, row=1,
+                columnspan=1)
+
+        # Increase angular velocity button
+        self.lt_button = ttk.Button(btnFrame, text="Left",
+                command=self.__lt_btn_cb)
+        self.lt_button.grid(column=1, row=1)
+
+        # Decrease angular velocity button
+        self.rt_button = ttk.Button(btnFrame, text="Right",
+                command=self.__rt_btn_cb)
+        self.rt_button.grid(column=3, row=1)
 
         # exit gui window
-        self.exit_button = Button(master, text="Close", command=master.quit)
-        self.exit_button.pack()
+        #self.exit_button = ttk.Button(master, text="Close",
+        #        command=master.quit)
+        #self.exit_button.pack()
 
 
-    def btn_cb(self):
-        print("Function called!")
+    def __up_btn_cb(self):
+        self.current_linear += 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __dn_btn_cb(self):
+        self.current_linear -= 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __lt_btn_cb(self):
+        self.current_angular += 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __rt_btn_cb(self):
+        self.current_angular -= 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __twist(self):
+        twist = Twist()
+        twist.linear.x  = self.current_linear
+        twist.angular.z = self.current_angular
+        return twist
 
 
     def startup(self):
+        rospy.init_node('terrapin_controller', anonymous=True)
         self.master.mainloop()
+
+
 
 
 if __name__ == '__main__':
