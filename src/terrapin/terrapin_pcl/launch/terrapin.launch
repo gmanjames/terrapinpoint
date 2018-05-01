@@ -33,18 +33,6 @@
     <arg name="run_registration" default="true"  />
 
     <!--  -->
-    <!-- Launch the robot_description node -->
-    <!--  -->
-    <include file="$(find terrapin_description)/launch/terrapin.model.launch" ns="/">
-      <arg name="paused"       value="$(arg paused)"       />
-      <arg name="use_sim_time" value="$(arg use_sim_time)" />
-      <arg name="gui"          value="$(arg gui)"          />
-      <arg name="headless"     value="$(arg headless)"     />
-      <arg name="debug"        value="$(arg debug)"        />
-      <arg name="verbose"      value="$(arg verbose)"      />
-    </include>
-
-    <!--  -->
     <!-- Start with the empty_world.launch file -->
     <!--  -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -57,9 +45,11 @@
         <arg name="verbose"      value="$(arg verbose)"      />
     </include>
 
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find terrapin_description)/urdf/terrapin.main.xacro" />
+
     <!-- Spawn a robot into Gazebo from the ROS Parameter Server -->
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
-          args="-param terrapin_description -urdf -model terrapin" />
+          args="-param robot_description -urdf -model terrapin" />
 
     <!-- Add a static transform publisher for viewing the point cloud data from camera -->
     <node name="point_cloud_broadcaster" pkg="tf" type="static_transform_publisher"

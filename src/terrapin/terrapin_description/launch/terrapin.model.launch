@@ -20,6 +20,6 @@
 
     <!-- Load the URDF into the ROS Parameter Server -->
     <!-- (expose the URDF model to {joint,robot}_state_publisher) -->
-    <param name="terrapin_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
 
 </launch>
