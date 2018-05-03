@@ -4,6 +4,7 @@ import rospy
 import ttk
 from Tkinter import *
 
+from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 
 
@@ -11,6 +12,9 @@ class Controls:
 
     def __init__(self, master):
         
+        self.count = 0
+
+
         # Ros publisher for velocity message
         self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
@@ -22,10 +26,15 @@ class Controls:
 
         master.title("Terrapin Controls")
 
-        content  = ttk.Frame(master)
+        content  = ttk.Frame(master, padding="5 5 5 5")
         content.grid(column=0, row=0)
 
-        btnFrame = ttk.Frame(content, borderwidth=5,
+        # Text area for console output
+        self.messages = Text(content, width=60, height=20, state="disabled")
+        self.messages.grid(column=3, row=0)
+
+        # Frame to hold arrow controls
+        btnFrame = ttk.Frame(content, borderwidth=2,
                 relief="solid", padding="7 7 7 7")
         btnFrame.grid(column=0, row=0, columnspan=3, rowspan=2)
 
@@ -83,10 +92,29 @@ class Controls:
         twist.angular.z = self.current_angular
         return twist
 
+    
+    def __sub_cb(self, dat):
+        self.count += 1
+
+        # Enable for writing and deleting
+        self.messages['state'] = 'normal'
+
+        # Insert new message
+        self.messages.delete('1.0', '2.0')
+        self.messages.insert('1.0', dat.data + ' ' + str(self.count))
+
+        # No longer want input
+        self.messages['state'] = 'disabled'
+
 
     def startup(self):
         rospy.init_node('terrapin_controller', anonymous=True)
+
+        # Subscribe to test message
+        rospy.Subscriber('/terrapin/messages', String, self.__sub_cb)
+
         self.master.mainloop()
+
 
 
 

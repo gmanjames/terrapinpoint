@@ -14,12 +14,15 @@ def run_publisher():
     vel = "4"
     msg = "msg"
     mis = "misc"
+
+    rate = rospy.Rate(1)
     while not rospy.is_shutdown():
         pub1.publish(vel)
         pub2.publish(msg)
         pub3.publish(mis)
 
         rospy.loginfo('vel: {}, msg: {}, mis: {}'.format(vel, msg, mis))
+        rate.sleep()
 
 
 def tests_spinoff():
