@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+
+import rospy
+import ttk
+from Tkinter import *
+
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+
+
+class Controls:
+
+    def __init__(self, master):
+        
+        self.count = 0
+
+
+        # Ros publisher for velocity message
+        self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+        self.current_linear  = 0.0
+        self.current_angular = 0.0
+
+        # Main window frame
+        self.master = master
+
+        master.title("Terrapin Controls")
+
+        content  = ttk.Frame(master, padding="5 5 5 5")
+        content.grid(column=0, row=0)
+
+        # Text area for console output
+        self.messages = Text(content, width=60, height=20, state="disabled")
+        self.messages.grid(column=3, row=0)
+
+        # Frame to hold arrow controls
+        btnFrame = ttk.Frame(content, borderwidth=2,
+                relief="solid", padding="7 7 7 7")
+        btnFrame.grid(column=0, row=0, columnspan=3, rowspan=2)
+
+        # Increase linear velocity button
+        self.up_button = ttk.Button(btnFrame, text="Up",
+                command=self.__up_btn_cb)
+        self.up_button.grid(column=2, row=0,
+                columnspan=1)
+
+        # Decrease linear velocity button
+        self.dn_button = ttk.Button(btnFrame, text="Down",
+                command=self.__dn_btn_cb)
+        self.dn_button.grid(column=2, row=1,
+                columnspan=1)
+
+        # Increase angular velocity button
+        self.lt_button = ttk.Button(btnFrame, text="Left",
+                command=self.__lt_btn_cb)
+        self.lt_button.grid(column=1, row=1)
+
+        # Decrease angular velocity button
+        self.rt_button = ttk.Button(btnFrame, text="Right",
+                command=self.__rt_btn_cb)
+        self.rt_button.grid(column=3, row=1)
+
+        # exit gui window
+        #self.exit_button = ttk.Button(master, text="Close",
+        #        command=master.quit)
+        #self.exit_button.pack()
+
+
+    def __up_btn_cb(self):
+        self.current_linear += 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __dn_btn_cb(self):
+        self.current_linear -= 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __lt_btn_cb(self):
+        self.current_angular += 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __rt_btn_cb(self):
+        self.current_angular -= 0.1
+        self.publisher.publish(self.__twist())
+
+
+    def __twist(self):
+        twist = Twist()
+        twist.linear.x  = self.current_linear
+        twist.angular.z = self.current_angular
+        return twist
+
+    
+    def __sub_cb(self, dat):
+        self.count += 1
+
+        # Enable for writing and deleting
+        self.messages['state'] = 'normal'
+
+        # Insert new message
+        self.messages.delete('1.0', '2.0')
+        self.messages.insert('1.0', dat.data + ' ' + str(self.count))
+
+        # No longer want input
+        self.messages['state'] = 'disabled'
+
+
+    def startup(self):
+        rospy.init_node('terrapin_controller', anonymous=True)
+
+        # Subscribe to test message
+        rospy.Subscriber('/terrapin/messages', String, self.__sub_cb)
+
+        self.master.mainloop()
+
+
+
+
+
+if __name__ == '__main__':
+    # Pass in root tk element
+    controls = Controls( Tk() )
+
+    controls.startup()
+
