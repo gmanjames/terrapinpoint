@@ -2,28 +2,20 @@
 #include <iostream>
 #include <ros/ros.h>
 #include "std_msgs/String.h"
+#include "std_msgs/Float32.h"
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-// #include <pcl/features/fpfh.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/voxel_grid.h>
-// #include <pcl/keypoints/iss_3d.h>
 #include <pcl/keypoints/sift_keypoint.h>
-// #include <pcl/keypoints/uniform_sampling.h>
-// #include <pcl/registration/correspondence_estimation.h>
-#include <pcl/registration/correspondence_estimation_normal_shooting.h>
-#include <pcl/registration/correspondence_rejection_sample_consensus.h>
-// #include <pcl/registration/correspondence_rejection_surface_normal.h>
-#include <pcl/registration/transformation_estimation_svd.h>
 
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
 using namespace pcl;
-using namespace pcl::registration;
 using namespace pcl_conversions;
 
 // ********************** GLOBALS ***********************************
@@ -39,7 +31,6 @@ Publisher filteredCloudPub;
 Publisher currentKeypointsPub;
 Publisher previousKeypointsPub;
 // Velocity data
-Publisher imuVelocityPub;
 Publisher calculatedVelocityPub;
 
 // Variables
@@ -54,21 +45,14 @@ const float min_contrast = 0.001f;
 
 // PCL Operation Objects
 VoxelGrid<PCLPointCloud2> voxel_grid;
-// ISSKeypoint3D<PointXYZRGB, PointXYZRGB> iss3d;
 SIFTKeypoint<PointXYZRGB, PointXYZRGB> sift;
-// UniformSampling<PointXYZRGB> uniform;
-NormalEstimation<PointXYZRGB, PointNormal> normal_est;
-// FPFHEstimation<PointXYZRGB, PointNormal, FPFHSignature33> fpfh_est;
-// CorrespondenceEstimation<PointXYZRGB, PointXYZRGB, float> corr_est;
-CorrespondenceEstimationNormalShooting<PointXYZRGB, PointXYZRGB, PointNormal, float> corr_est;
-CorrespondenceRejectorSampleConsensus<PointXYZRGB> reject;
-// CorrespondenceRejectorSurfaceNormal reject;
-TransformationEstimationSVD<PointXYZRGB, PointXYZRGB> trans_est;
 
 // Previous Cloud Data
 bool previousExists = false;
 PointCloud<PointXYZRGB>::Ptr previous_keypoints (new PointCloud<PointXYZRGB>);
-PointCloud<PointNormal>::Ptr previous_descriptors (new PointCloud<PointNormal>);
+float x_previous;
+float y_previous;
+float z_previous;
 Time previous_timestamp;
 
 
@@ -127,29 +111,12 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   PointCloud<PointXYZRGB>::Ptr current_keypoints (new PointCloud<PointXYZRGB>);
   search::KdTree<PointXYZRGB>::Ptr keypoint_tree (new search::KdTree<PointXYZRGB> ());
 
-  // ISS 3D
-  // iss3d.setInputCloud(cloud_xyz);
-  // iss3d.setSearchMethod(keypoint_tree);
-  // iss3d.setSalientRadius(6.0 * cloud_resolution);
-  // iss3d.setNonMaxRadius(4.0 * cloud_resolution);
-  // iss3d.setThreshold21(0.975);
-  // iss3d.setThreshold32(0.975);
-  // iss3d.setMinNeighbors(5);
-  // iss3d.setNumberOfThreads(1);
-  // iss3d.compute(*current_keypoints);
-
   // SIFT Feature extractor
   sift.setInputCloud(cloud_xyz);
   sift.setSearchMethod(keypoint_tree);
   sift.setScales(min_scale, n_octaves, n_scales_per_octave);
   sift.setMinimumContrast(min_contrast);
   sift.compute(*current_keypoints);
-
-  // Uniform Sampling
-  // uniform.setInputCloud(cloud_xyz);
-  // uniform.setSearchMethod(keypoint_tree);
-  // uniform.setRadiusSearch(1.0); // 1m
-  // uniform.compute(current_keypoints);
 
   // Publish Message: Keypoints
   cout << "KEYPOINTS FOUND: " << current_keypoints->points.size() << endl;
@@ -159,96 +126,69 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   // Check if there are enough keypoints before continuing
   if (current_keypoints->points.size() >= keypoint_threshold) {
 
-    // CREATE FEATURE DISCRIPTORS
-    // Normal Estimation
-    PointCloud<PointNormal>::Ptr current_descriptors (new PointCloud<PointNormal>);
-    search::KdTree<PointXYZRGB>::Ptr tree_n (new search::KdTree<PointXYZRGB>());
-    normal_est.setInputCloud(current_keypoints);
-    normal_est.setSearchMethod(tree_n);
-    normal_est.setRadiusSearch(0.2);
-    normal_est.compute(*current_descriptors);
-
-    // FPFH Estimation (Fast Point Feature Histograms)
-    // PointCloud<PointXYZRGB>::Ptr current_keypoints_ptr (&current_keypoints);
-    // PointCloud<FPFHSignature33>::Ptr current_descriptors (new PointCloud<FPFHSignature33>);
-    // fpfh_est.setInputCloud(current_keypoints_ptr);
-    // fpfh_est.setInputNormals(cloud_normals);
-    // fpfh_est.setSearchSurface(cloud_xyz);
-    // fpfh_est.setRadiusSearch(1); // 1m
-    // fpfh_est.compute(*current_descriptors);
+    // GET POINT CLOUD XYZ CENTROID
+    float x_total = 0;
+    float y_total = 0;
+    float z_total = 0;
+    for (int i = 0; i < current_keypoints->points.size(); i++) {
+      x_total += current_keypoints->points[i].x;
+      y_total += current_keypoints->points[i].y;
+      z_total += current_keypoints->points[i].z;
+    }
+    float x_current = x_total / current_keypoints->points.size();
+    float y_current = y_total / current_keypoints->points.size();
+    float z_current = z_total / current_keypoints->points.size();
 
     // Check if previous cloud exists before continuing
     if (!previousExists) {
       // NO PREVIOUS POINT CLOUD
       // Publish Message: pervious cloud not found
+      cout << "No Previous Cloud Data Was Found..." << endl;
       ssMsg << "No Previous Cloud Data Was Found...";
       publishRegMsg();
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
-      previous_descriptors->swap(*current_descriptors);
+      x_previous = x_current;
+      y_previous = y_current;
+      z_previous = z_current;
       previous_timestamp = current_timestamp;
       previousExists = true;
 
       // Publish Message: pervious cloud set
+      cout << "Previous Cloud Set" << endl;
       ssMsg << "Previous Cloud Set";
       publishRegMsg();
 
     } else {
       // COMPARE TO PREVIOUS POINT CLOUD
       // Publish Message: Previous cloud found
+      cout << "Previous Cloud Found!" << endl;
       ssMsg << "Previous Cloud Found!";
       publishRegMsg();
 
-      // ESTIMATE CORRESPONDENCE
-      CorrespondencesPtr all_correspondences (new Correspondences);
-      search::KdTree<PointXYZRGB>::Ptr corr_tree_source (new search::KdTree<PointXYZRGB>());
-      search::KdTree<PointXYZRGB>::Ptr corr_tree_target (new search::KdTree<PointXYZRGB>());
-      corr_est.setInputSource(current_keypoints);
-      corr_est.setSourceNormals(current_descriptors);
-      corr_est.setInputTarget(previous_keypoints);
-      corr_est.setSearchMethodSource(corr_tree_source);
-      corr_est.setSearchMethodTarget(corr_tree_target);
-      // corr_est.setTargetNormals(previous_descriptors);
-      corr_est.determineReciprocalCorrespondences(*all_correspondences);
 
-      cout << "All Correspondences:" << all_correspondences->size() << endl;
-
-      // CORRESPONDENCE REJECTION
-      CorrespondencesPtr good_correspondences (new Correspondences);
-      reject.setInputSource(current_keypoints);
-      // reject.setSourceNormals(current_descriptors);
-      reject.setInputTarget(previous_keypoints);
-      // reject.setTargetNormals(previous_descriptors);
-      reject.setInputCorrespondences(all_correspondences);
-      reject.getCorrespondences(*good_correspondences);
-      // reject.getRemainingCorrespondences(*all_correspondences, *good_correspondences);
-
-      cout << "Good Correspondences:" << good_correspondences->size() << endl;
+      // COMPARE CENTROIDS
+      float x_diff = x_current - x_previous;
+      float y_diff = y_current - y_previous;
+      float z_diff = z_current - z_previous;
+      float centroid_dist = sqrt(pow(x_diff,2) + pow(y_diff,2) + pow(z_diff,2));
+      float time_diff = current_timestamp.toSec() - previous_timestamp.toSec();
+      float velocity = centroid_dist / time_diff;
+      cout << endl;
+      cout << "X diff: " << x_diff << endl;
+      cout << "Y diff: " << y_diff << endl;
+      cout << "Z diff: " << y_diff << endl;
+      cout << endl << "CENTROID DISPLACEMENT: " << centroid_dist << endl;
+      cout << "TIME CHANGE: " << time_diff << endl;
+      cout << endl << "VELOCITY: " << velocity << endl;
 
 
-      // EXTIMATE TRANSFORMATION
-      Eigen::Matrix4f transform;
-      trans_est.estimateRigidTransformation(*current_keypoints, *previous_keypoints, *good_correspondences, transform);
+      // Publish Velocity data
+      std_msgs::Float32 calculated_velocity;
+      calculated_velocity.data = velocity;
+      calculatedVelocityPub.publish(calculated_velocity);
 
-
-      // Eigen::Affine3f transform;
-      // transform.matrix() = transform4f;
-
-
-
-      // Publish Message: Transformation
-      cout << endl << "TRANSFORMATION:" << endl;
-      cout << "TIME:  " << current_timestamp << endl;
-      // publishRegMsg();
-      cout << "X: " << transform.row(0) << endl;
-      // publishRegMsg();
-      cout << "Y: " << transform.row(1) << endl;
-      // publishRegMsg();
-      cout << "Z: " << transform.row(2) << endl;
-      // publishRegMsg();
-      cout << "Row 4: " << transform.row(3) << endl << endl;
-      // publishRegMsg();
 
       // Publish keypoint point clouds
       PCLPointCloud2 currKeypoints;
@@ -266,11 +206,14 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
-      previous_descriptors->swap(*current_descriptors);
+      x_previous = x_current;
+      y_previous = y_current;
+      z_previous = z_current;
       previous_timestamp = current_timestamp;
     }
   }
   // Publish Message: Done
+  cout << "------------------------------------------------" << endl << endl;
   ssMsg << "------------------------------------------------";
   publishRegMsg();
 }
@@ -290,6 +233,7 @@ int main (int argc, char** argv) {
   filteredCloudPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/filtered", 1);
   currentKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/current_keypoints", 1);
   previousKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/previous_keypoints", 1);
+  calculatedVelocityPub = nh.advertise<std_msgs::Float32> ("terrapin/calculated_velocity", 1);
 
   // Spin
   ros::spin ();
