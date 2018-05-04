@@ -32,6 +32,7 @@ Publisher currentKeypointsPub;
 Publisher previousKeypointsPub;
 // Velocity data
 Publisher calculatedVelocityPub;
+Publisher jsonMsgPub;
 
 // Variables
 const float filter_density = 0.01;
@@ -53,25 +54,16 @@ PointCloud<PointXYZRGB>::Ptr previous_keypoints (new PointCloud<PointXYZRGB>);
 float x_previous;
 float y_previous;
 float z_previous;
+int previous_cloud_num;
 Time previous_timestamp;
 
 
 // ********************** FUNCTIONS ***********************************
 
-
-void publishRegMsg () {
-  // Publish stringstream and clear it's contents
-  rosMsg.data = ssMsg.str();
-  regMsgPub.publish(rosMsg);
-  ssMsg.str(string());
-}
-
-
 void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   // Publish Message: analyzing cloud
-  cout << "Analyzing Cloud: " << cloud_msg->header.seq << endl;
-  ssMsg << "Analyzing Cloud: " << cloud_msg->header.seq;
-  publishRegMsg();
+  int current_cloud_num = cloud_msg->header.seq;
+  cout << "Analyzing Cloud: " << current_cloud_num << endl;
 
   // Publish the original cloud
   originalCloudPub.publish(cloud_msg);
@@ -92,14 +84,6 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   PointCloud<PointXYZRGB>::Ptr cloud_xyz (new PointCloud<PointXYZRGB>);
   fromPCLPointCloud2(cloud_filtered, *cloud_xyz);
 
-  // Publish Message: Input data
-  ssMsg << "INPUT    Height: " << cloud->height << "  Width: " << cloud->width;
-  publishRegMsg();
-
-  // Publish Message: Filtered cloud data
-  ssMsg << "FILTERED POINTS: " << cloud_xyz->points.size();
-  publishRegMsg();
-
   // Publish filtered point cloud
   PointCloud2 filteredOutput;
   fromPCL(cloud_filtered, filteredOutput);
@@ -118,10 +102,7 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   sift.setMinimumContrast(min_contrast);
   sift.compute(*current_keypoints);
 
-  // Publish Message: Keypoints
   cout << "KEYPOINTS FOUND: " << current_keypoints->points.size() << endl;
-  ssMsg << "KEYPOINTS FOUND: " << current_keypoints->points.size();
-  publishRegMsg();
 
   // Check if there are enough keypoints before continuing
   if (current_keypoints->points.size() >= keypoint_threshold) {
@@ -142,31 +123,22 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
     // Check if previous cloud exists before continuing
     if (!previousExists) {
       // NO PREVIOUS POINT CLOUD
-      // Publish Message: pervious cloud not found
       cout << "No Previous Cloud Data Was Found..." << endl;
-      ssMsg << "No Previous Cloud Data Was Found...";
-      publishRegMsg();
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
       x_previous = x_current;
       y_previous = y_current;
       z_previous = z_current;
+      previous_cloud_num = current_cloud_num;
       previous_timestamp = current_timestamp;
       previousExists = true;
 
       // Publish Message: pervious cloud set
       cout << "Previous Cloud Set" << endl;
-      ssMsg << "Previous Cloud Set";
-      publishRegMsg();
-
     } else {
-      // COMPARE TO PREVIOUS POINT CLOUD
-      // Publish Message: Previous cloud found
+      // PREVIOUS POINT CLOUD FOUND
       cout << "Previous Cloud Found!" << endl;
-      ssMsg << "Previous Cloud Found!";
-      publishRegMsg();
-
 
       // COMPARE CENTROIDS
       float x_diff = x_current - x_previous;
@@ -175,6 +147,7 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       float centroid_dist = sqrt(pow(x_diff,2) + pow(y_diff,2) + pow(z_diff,2));
       float time_diff = current_timestamp.toSec() - previous_timestamp.toSec();
       float velocity = centroid_dist / time_diff;
+
       cout << endl;
       cout << "X diff: " << x_diff << endl;
       cout << "Y diff: " << y_diff << endl;
@@ -189,6 +162,24 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       calculated_velocity.data = velocity;
       calculatedVelocityPub.publish(calculated_velocity);
 
+      // Publish JSON data
+      stringstream json;
+      json << "{\"velocity\":" << velocity;
+      json << ",\"displacement\":" << centroid_dist;
+      json << ",\"deltaT\":" << time_diff;
+      json << ",\"deltaX\":" << x_diff;
+      json << ",\"deltaY\":" << y_diff;
+      json << ",\"deltaZ\":" << z_diff;
+      json << ",\"previousCloudNum\":" << previous_cloud_num;
+      json << ",\"previousTimestamp\":" << previous_timestamp;
+      json << ",\"previousNumKeypoints\":" << previous_keypoints->points.size();
+      json << ",\"currentCloudNum\":" << current_cloud_num;
+      json << ",\"currentTimestamp\":" << current_timestamp;
+      json << ",\"currentNumKeypoints\":" << current_keypoints->points.size();
+      json << "}";
+      std_msgs::String rosJSON;
+      rosJSON.data = json.str();
+      jsonMsgPub.publish(rosJSON);
 
       // Publish keypoint point clouds
       PCLPointCloud2 currKeypoints;
@@ -209,13 +200,12 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       x_previous = x_current;
       y_previous = y_current;
       z_previous = z_current;
+      previous_cloud_num = current_cloud_num;
       previous_timestamp = current_timestamp;
     }
   }
   // Publish Message: Done
   cout << "------------------------------------------------" << endl << endl;
-  ssMsg << "------------------------------------------------";
-  publishRegMsg();
 }
 
 
@@ -228,12 +218,12 @@ int main (int argc, char** argv) {
   Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
 
   // Create ROS Publishers
-  regMsgPub = nh.advertise<std_msgs::String> ("terrapin/registration/messages", 1);
   originalCloudPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/original", 1);
   filteredCloudPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/filtered", 1);
   currentKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/current_keypoints", 1);
   previousKeypointsPub = nh.advertise<PointCloud2> ("terrapin/point_clouds/previous_keypoints", 1);
   calculatedVelocityPub = nh.advertise<std_msgs::Float32> ("terrapin/calculated_velocity", 1);
+  jsonMsgPub = nh.advertise<std_msgs::String> ("terrapin/json_message", 1);
 
   // Spin
   ros::spin ();
