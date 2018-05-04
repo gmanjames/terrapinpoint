@@ -142,6 +142,7 @@ add_executable(original src/original.cpp)
 add_executable(filter src/filter.cpp)
 add_executable(keypoints src/keypoint_extractor.cpp)
 add_executable(registration src/registration.cpp)
+add_executable(centroid_estimation src/centroid_estimation.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -163,6 +164,7 @@ target_link_libraries(original ${catkin_LIBRARIES})
 target_link_libraries(filter ${catkin_LIBRARIES})
 target_link_libraries(keypoints ${catkin_LIBRARIES})
 target_link_libraries(registration ${catkin_LIBRARIES})
+target_link_libraries(centroid_estimation ${catkin_LIBRARIES})
 
 #############
 ## Install ##

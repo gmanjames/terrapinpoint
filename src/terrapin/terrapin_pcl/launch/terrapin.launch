@@ -12,7 +12,10 @@
     <!-- Keypoint Extractor: Gets keypoints from PointCloud2 data -->
     <arg name="run_keypoints" default="false"  />
     <!-- Registration: Compares point clouds -->
-    <arg name="run_registration" default="true"  />
+    <arg name="run_registration" default="false"  />
+    <!-- Centroid Estimation: Compares point clouds -->
+    <arg name="run_centroid_estimation" default="false"  />
+
 
     <!--  -->
     <!-- Start with the empty_world.launch file -->
@@ -59,6 +62,12 @@
     <!-- Launch PCL registration node -->
     <group if="$(arg run_registration)">
       <node name="pcl_registration" pkg="terrapin_pcl" type="registration"
+            args="input:=$(arg subscripe_to)" />
+    </group>
+
+    <!-- Launch PCL centroid_estimation node -->
+    <group if="$(arg run_registration)">
+      <node name="pcl_registration" pkg="terrapin_pcl" type="centroid_estimation"
             args="input:=$(arg subscripe_to)" />
     </group>
 
