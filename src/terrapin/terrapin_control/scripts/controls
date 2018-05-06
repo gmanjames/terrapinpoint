@@ -2,6 +2,7 @@
 
 import rospy
 import json
+import time
 import ttk
 from Tkinter import *
 
@@ -10,6 +11,41 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
 
+'''
+Test
+
+'''
+class Test:
+
+    def __init__(self, pub):
+
+        # Array to hold steps of linear and angular vel
+        self.__steps = []
+
+        # Velocity to publish
+        self.__twist = Twist()
+
+        # Control's publisher
+        self.publisher = pub
+
+ 
+    def add_step(self, step):
+        self.__steps.append(step)
+
+
+    def start(self):
+        for step in self.__steps:
+            self.__twist.linear.x  = step[0]
+            self.__twist.angular.z = step[1]
+            self.publisher.publish(self.__twist)
+            time.sleep(step[2])
+
+
+
+'''
+Controls
+
+'''
 class Controls:
 
     def __init__(self, master):
@@ -62,10 +98,18 @@ class Controls:
                 command=self.__rt_btn_cb)
         self.rt_button.grid(column=3, row=1)
 
-        # exit gui window
-        #self.exit_button = ttk.Button(master, text="Close",
-        #        command=master.quit)
-        #self.exit_button.pack()
+        # Create tests and test frame
+        self.test_1 = Test(self.publisher)
+        self.test_1.add_step([0.2, 0.0, 3])
+        self.test_1.add_step([0.2, 0.4, 3])
+        self.test_1.add_step([0.2, -0.4, 3])
+
+
+        testFrame = ttk.Frame(content, padding="7 7 7 7")
+        testFrame.grid(column=0, row=1, columnspan=3, rowspan=1)
+
+        self.test_btn_1 = ttk.Button(testFrame, text="Test 1", command=self.__test_cb_1)
+        self.test_btn_1.grid(column=0, row=0)
 
 
     def __up_btn_cb(self):
@@ -86,6 +130,10 @@ class Controls:
     def __rt_btn_cb(self):
         self.current_angular -= 0.1
         self.publisher.publish(self.__twist())
+
+
+    def __test_cb_1(self):
+        self.test_1.start()
 
 
     def __twist(self):
