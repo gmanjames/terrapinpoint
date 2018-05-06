@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 
 import rospy
+import json
 import ttk
 from Tkinter import *
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
 
 class Controls:
 
     def __init__(self, master):
         
+        # May be removed unless otherwise found useful
         self.count = 0
-
 
         # Ros publisher for velocity message
         self.publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
@@ -30,7 +32,7 @@ class Controls:
         content.grid(column=0, row=0)
 
         # Text area for console output
-        self.messages = Text(content, width=60, height=20, state="disabled")
+        self.messages = Text(content, width=65, height=30, state="disabled")
         self.messages.grid(column=3, row=0)
 
         # Frame to hold arrow controls
@@ -94,14 +96,58 @@ class Controls:
 
     
     def __sub_cb(self, dat):
+        # velocity
+        # displacement
+        # deltaT
+        # deltaX
+        # deltaY
+        # deltaZ
+        # previousCloudNum
+        # previousTimestamp
+        # previousNumKeypoints
+        # currentCloudNum
+        # currentTimestamp
+        # ---------------------
+        # currentNumKeypoints |
+
         self.count += 1
+
+
+        # Wait for an odom message to be published
+        odom     = rospy.wait_for_message('/odom', Odometry)
+        odom_vel = odom.twist.twist.linear.x
+
+        dat_dict = json.loads(dat.data)
+        dat_dict['odom velocity'] = odom_vel
+
+        str_msg = ''
+        str_msg += 'frame ' + str(self.count) + '\n'
+        str_msg += '-----\n'
+        max_x   = 21
+        val     = None
+        for key in dat_dict:
+            key = str(key)
+            val = str(dat_dict[key])
+            num_spaces_key = max_x - len(key)
+            num_spaces_val = max_x - len(val)
+
+            for i in range(0, num_spaces_key):
+                str_msg += ' '
+
+            str_msg += key + ':'
+
+            for i in range(0, num_spaces_val):
+                str_msg += ' '
+
+            str_msg += val + '\n\n'
+
 
         # Enable for writing and deleting
         self.messages['state'] = 'normal'
 
         # Insert new message
-        self.messages.delete('1.0', '2.0')
-        self.messages.insert('1.0', dat.data + ' ' + str(self.count))
+        self.messages.delete('1.0', 'end')
+        self.messages.insert('1.0', str_msg)
 
         # No longer want input
         self.messages['state'] = 'disabled'
@@ -111,7 +157,7 @@ class Controls:
         rospy.init_node('terrapin_controller', anonymous=True)
 
         # Subscribe to test message
-        rospy.Subscriber('/terrapin/messages', String, self.__sub_cb)
+        rospy.Subscriber('/terrapin/json_message', String, self.__sub_cb)
 
         self.master.mainloop()
 
