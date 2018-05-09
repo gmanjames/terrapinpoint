@@ -66,7 +66,7 @@
     </group>
 
     <!-- Launch PCL centroid_estimation node -->
-    <group if="$(arg run_registration)">
+    <group if="$(arg run_centroid_estimation)">
       <node name="pcl_registration" pkg="terrapin_pcl" type="centroid_estimation"
             args="input:=$(arg subscripe_to)" />
     </group>
