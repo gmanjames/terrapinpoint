@@ -16,7 +16,7 @@ Test
 '''
 class Test:
 
-    def __init__(self, pub):
+    def __init__(self, controls):
 
         # Array to hold steps of linear and angular vel
         self.__steps = []
@@ -25,7 +25,7 @@ class Test:
         self.__twist = Twist()
 
         # Control's publisher
-        self.publisher = pub
+        self.controls = controls
 
  
     def add_step(self, step):
@@ -36,8 +36,16 @@ class Test:
         for step in self.__steps:
             self.__twist.linear.x  = step[0]
             self.__twist.angular.z = step[1]
-            self.publisher.publish(self.__twist)
+            self.controls.publisher.publish(self.__twist)
             time.sleep(step[2])
+
+        # Stop the bot
+        self.__twist.linear.x  = 0.0
+        self.__twist.angular.z = 0.0
+        self.controls.publisher.publish(self.__twist)
+
+        print('end test\n')
+        self.controls.end_test()
 
 
 
@@ -98,10 +106,12 @@ class Controls:
         self.rt_button.grid(column=3, row=1)
 
         # Create tests and test frame
-        self.test_1 = Test(self.publisher)
-        self.test_1.add_step([-0.2,  0.0, 5])
-        self.test_1.add_step([-0.2,  0.4, 5])
-        self.test_1.add_step([-0.2, -0.4, 5])
+        self.testing = False
+
+        self.test_1 = Test(self)
+        self.test_1.add_step([-0.2,  0.0, 9])
+        self.test_1.add_step([-0.2,  0.4, 9])
+        self.test_1.add_step([-0.2, -0.4, 9])
 
 
         testFrame = ttk.Frame(content, padding="7 7 7 7")
@@ -131,7 +141,25 @@ class Controls:
         self.publisher.publish(self.__twist())
 
 
+    '''
+    Begin writing to dat file
+
+    '''
+    def begin_test(self):
+        print('begin test\n')
+        self.testing = True
+
+
+    '''
+    Stop writing to dat file
+    
+    '''
+    def end_test(self):
+        self.testing = False
+
+
     def __run_test(self):
+        self.begin_test()
         self.test_1.start()
 
 
@@ -158,8 +186,7 @@ class Controls:
         # previousNumKeypoints
         # currentCloudNum
         # currentTimestamp
-        # ---------------------
-        # currentNumKeypoints |
+        # currentNumKeypoints
 
         print("sub called\n")
         self.count += 1
@@ -203,6 +230,11 @@ class Controls:
 
         # No longer want input
         self.messages['state'] = 'disabled'
+
+        # Write to data file
+        if self.testing:
+            handle = open('dat.txt', 'w')
+            handle.write(str(self.count) + ': ' + str(dat_dict['currentTimestamp']) + ',' + str(dat_dict['velocity']) + '\n')
 
 
     def startup(self):
