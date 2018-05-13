@@ -108,6 +108,9 @@ class Controls:
         # Create tests and test frame
         self.testing = False
 
+        testFrame = ttk.Frame(content, padding="7 7 7 7")
+        testFrame.grid(column=0, row=1, columnspan=3, rowspan=1)
+
         # Test 1
         # w/t single barrel
         self.test_1 = Test(self)
@@ -115,21 +118,9 @@ class Controls:
         self.test_1.add_step([0.0,  0.0, 10])
         self.test_1.add_step([-0.2, 0.0, 20])
 
-
-        # Test 2
-        # w/t single barrel
-        self.test_1 = Test(self)
-        self.test_1.add_step([0.2,   0.1, 20])
-        self.test_1.add_step([0.0,   0.0, 10])
-        self.test_1.add_step([-0.2, -0.1, 20])
-
-
-        testFrame = ttk.Frame(content, padding="7 7 7 7")
-        testFrame.grid(column=0, row=1, columnspan=3, rowspan=1)
-
-        self.test_btn_1 = ttk.Button(testFrame, text="Test 1", command=self.__test_cb_1)
+        self.test_btn_1 = ttk.Button(testFrame, text="Test", command=self.__test_cb_1)
         self.test_btn_1.grid(column=0, row=0)
-
+       
 
     def __up_btn_cb(self):
         self.current_linear += 0.1
@@ -156,7 +147,7 @@ class Controls:
 
     '''
     def begin_test(self):
-        print('begin test\n')
+        print('begin test: ' + str(self.count))
         self.testing = True
 
 
@@ -165,16 +156,17 @@ class Controls:
     
     '''
     def end_test(self):
+        print('end test: ' + str(self.count))
         self.testing = False
 
 
-    def __run_test(self):
+    def __run_test_1(self):
         self.begin_test()
         self.test_1.start()
 
 
     def __test_cb_1(self):
-        threading.Thread(target=self.__run_test).start()
+        threading.Thread(target=self.__run_test_1).start()
 
 
     def __twist(self):
@@ -198,7 +190,6 @@ class Controls:
         # currentTimestamp
         # currentNumKeypoints
 
-        self.count += 1
 
 
         # Wait for an odom message to be published
@@ -207,6 +198,8 @@ class Controls:
 
         dat_dict = json.loads(dat.data)
         dat_dict['odom_velocity'] = odom_vel
+
+        self.count = dat_dict['currentTimestamp']
 
         str_msg = ''
         str_msg += 'frame ' + str(self.count) + '\n'
@@ -240,15 +233,6 @@ class Controls:
         # No longer want input
         self.messages['state'] = 'disabled'
 
-        # Write to data file
-        if self.testing:
-            handle = open('dat.txt', 'a+')
-
-            ours = math.fabs(float(dat_dict['velocity']))
-            odom = math.fabs(float(dat_dict['odom_velocity']))
-            diff = math.fabs(ours - odom)
-            perr = diff / ((ours + odom) / 2)
-            handle.write(str(self.count) + ': ' + str(dat_dict['currentTimestamp']) + ',' + str(dat_dict['odom_velocity']) + ',' + str(perr) + '\n')
 
 
     def startup(self):
