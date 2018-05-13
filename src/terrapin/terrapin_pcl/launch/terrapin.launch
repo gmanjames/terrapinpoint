@@ -18,6 +18,9 @@
     <!-- Correspondence Estimation: Compares point clouds -->
     <arg name="run_correspondence_estimation" default="false"  />
 
+    <!-- Record Velocity -->
+    <arg name="record_velocity" default="false"  />
+
 
     <!--  -->
     <!-- Start with the empty_world.launch file -->
@@ -76,6 +79,15 @@
     <!-- Launch PCL correspondence_estimation node -->
     <group if="$(arg run_correspondence_estimation)">
       <node name="pcl_correspondence_estimation" pkg="terrapin_pcl" type="correspondence_estimation"
+            args="input:=$(arg subscripe_to)" />
+    </group>
+
+    <!-- Launch PCL correspondence_estimation node -->
+    <group if="$(arg record_velocity)">
+      <node name="record_odom_velocity" pkg="terrapin_csv" type="record_odom_velocity"
+            args="input:=$(arg subscripe_to)" />
+            
+      <node name="record_calculated_velocity" pkg="terrapin_csv" type="record_calculated_velocity"
             args="input:=$(arg subscripe_to)" />
     </group>
 
