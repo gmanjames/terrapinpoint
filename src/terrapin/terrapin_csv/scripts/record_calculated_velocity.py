@@ -3,6 +3,7 @@
 from __future__ import division
 
 import rospy
+import math
 import json
 import csv
 import datetime
@@ -21,7 +22,7 @@ def record_calculated_velocity(jsonString):
     # print(jsonData)
 
     # Extract Json Data
-    velocity = jsonData['velocity']
+    velocity = math.fabs(float(jsonData['velocity']))
     previous_timestamp = jsonData['previousTimestamp']
     current_timestamp = jsonData['currentTimestamp']
 

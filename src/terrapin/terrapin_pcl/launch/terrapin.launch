@@ -20,25 +20,29 @@
 
     <!-- Record Velocity -->
     <arg name="record_velocity" default="false"  />
+    <arg name="run_simulation" default="false"  />
 
 
-    <!--  -->
-    <!-- Start with the empty_world.launch file -->
-    <!--  -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name"   value="$(find terrapin_pcl)/worlds/terrapin_hydrant.world"/>
-        <arg name="paused"       value="false" />
-        <arg name="use_sim_time" value="true"  />
-        <arg name="gui"          value="true"  />
-        <arg name="headless"     value="false" />
-        <arg name="debug"        value="false" />
-    </include>
+    <group if="$(arg run_simulation)">
+	    <!--  -->
+	    <!-- Start with the empty_world.launch file -->
+	    <!--  -->
+	    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="world_name"   value="$(find terrapin_pcl)/worlds/terrapin_hydrant.world"/>
+		<arg name="paused"       value="false" />
+		<arg name="use_sim_time" value="true"  />
+		<arg name="gui"          value="true"  />
+		<arg name="headless"     value="false" />
+		<arg name="debug"        value="false" />
+	    </include>
+
+
+	    <!-- Spawn a robot into Gazebo from the ROS Parameter Server -->
+	    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+		  args="-param robot_description -urdf -model turtlebot3_waffle" />
+    </group>
 
     <param name="robot_description" command="$(find xacro)/xacro.py $(find turtlebot3_description)/urdf/turtlebot3_waffle.urdf.xacro" />
-
-    <!-- Spawn a robot into Gazebo from the ROS Parameter Server -->
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
-          args="-param robot_description -urdf -model turtlebot3_waffle" />
 
     <!-- Add a static transform publisher for viewing the point cloud data from camera -->
     <node name="point_cloud_broadcaster" pkg="tf" type="static_transform_publisher"

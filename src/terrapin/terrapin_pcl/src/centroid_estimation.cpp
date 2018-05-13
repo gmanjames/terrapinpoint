@@ -42,7 +42,7 @@ const float min_contrast = 0.001f;
 
 // PCL Operation Objects
 VoxelGrid<PCLPointCloud2> voxel_grid;
-SIFTKeypoint<PointXYZRGB, PointXYZRGB> sift;
+//SIFTKeypoint<PointXYZRGB, PointXYZRGB> sift;
 
 // Previous Cloud Data
 bool previousExists = false;
@@ -75,30 +75,34 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   voxel_grid.setInputCloud(cloudPtr);
   voxel_grid.setLeafSize(filter_density, filter_density, filter_density);
   voxel_grid.filter(cloud_filtered);
+  cout << "points filtered" << endl;
 
   // Convert cloud to PointXYZRGB
   PointCloud<PointXYZRGB>::Ptr cloud_xyz (new PointCloud<PointXYZRGB>);
   fromPCLPointCloud2(cloud_filtered, *cloud_xyz);
+  cout << "points converted" << endl;
+  cout << cloud_xyz->points.size() << endl;
 
   // Publish filtered point cloud
   PointCloud2 filteredOutput;
   fromPCL(cloud_filtered, filteredOutput);
   filteredOutput.header = cloud_msg->header;
   filteredCloudPub.publish(filteredOutput);
+  cout << "points published" << endl;
 
 
   // EXTRACT KEYPOINTS
-  PointCloud<PointXYZRGB>::Ptr current_keypoints (new PointCloud<PointXYZRGB>);
-  search::KdTree<PointXYZRGB>::Ptr keypoint_tree (new search::KdTree<PointXYZRGB> ());
+  PointCloud<PointXYZRGB>::Ptr current_keypoints (cloud_xyz);
+  //search::KdTree<PointXYZRGB>::Ptr keypoint_tree (new search::KdTree<PointXYZRGB> ());
 
   // SIFT Feature extractor
-  sift.setInputCloud(cloud_xyz);
-  sift.setSearchMethod(keypoint_tree);
-  sift.setScales(min_scale, n_octaves, n_scales_per_octave);
-  sift.setMinimumContrast(min_contrast);
-  sift.compute(*current_keypoints);
+  //sift.setInputCloud(cloud_xyz);
+  //sift.setSearchMethod(keypoint_tree);
+  //sift.setScales(min_scale, n_octaves, n_scales_per_octave);
+  //sift.setMinimumContrast(min_contrast);
+  //sift.compute(*current_keypoints);
 
-  cout << "KEYPOINTS FOUND: " << current_keypoints->points.size() << endl;
+  //cout << "KEYPOINTS FOUND: " << current_keypoints->points.size() << endl;
 
   // Check if there are enough keypoints before continuing
   if (current_keypoints->points.size() >= keypoint_threshold) {
