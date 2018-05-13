@@ -14,7 +14,12 @@
     <!-- Registration: Compares point clouds -->
     <arg name="run_registration" default="false"  />
     <!-- Centroid Estimation: Compares point clouds -->
-    <arg name="run_centroid_estimation" default="false"  />
+    <arg name="run_centroid_estimation" default="true"  />
+    <!-- Correspondence Estimation: Compares point clouds -->
+    <arg name="run_correspondence_estimation" default="false"  />
+
+    <!-- Record Velocity -->
+    <arg name="record_velocity" default="false"  />
 
 
     <!--  -->
@@ -67,7 +72,22 @@
 
     <!-- Launch PCL centroid_estimation node -->
     <group if="$(arg run_centroid_estimation)">
-      <node name="pcl_registration" pkg="terrapin_pcl" type="centroid_estimation"
+      <node name="pcl_centroid_estimation" pkg="terrapin_pcl" type="centroid_estimation"
+            args="input:=$(arg subscripe_to)" />
+    </group>
+
+    <!-- Launch PCL correspondence_estimation node -->
+    <group if="$(arg run_correspondence_estimation)">
+      <node name="pcl_correspondence_estimation" pkg="terrapin_pcl" type="correspondence_estimation"
+            args="input:=$(arg subscripe_to)" />
+    </group>
+
+    <!-- Launch PCL correspondence_estimation node -->
+    <group if="$(arg record_velocity)">
+      <node name="record_odom_velocity" pkg="terrapin_csv" type="record_odom_velocity"
+            args="input:=$(arg subscripe_to)" />
+            
+      <node name="record_calculated_velocity" pkg="terrapin_csv" type="record_calculated_velocity"
             args="input:=$(arg subscripe_to)" />
     </group>
 

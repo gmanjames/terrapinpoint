@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(terrapin_pcl)
+project(terrapin_csv)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,13 +7,7 @@ project(terrapin_pcl)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  pcl_conversions
-  pcl_ros
-  roscpp
-  std_msgs
-  sensor_msgs
-)
+find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -105,10 +99,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
- # INCLUDE_DIRS include
- LIBRARIES terrapin_pcl
- CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
- # DEPENDS system_lib
+#  INCLUDE_DIRS include
+#  LIBRARIES terrapin_csv
+#  CATKIN_DEPENDS other_catkin_pkg
+#  DEPENDS system_lib
 )
 
 ###########
@@ -119,12 +113,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+# ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/terrapin_pcl.cpp
+#   src/${PROJECT_NAME}/terrapin_csv.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -135,15 +129,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/terrapin_pcl_node.cpp)
-
-# PointCloud executables
-add_executable(original src/original.cpp)
-add_executable(filter src/filter.cpp)
-add_executable(keypoints src/keypoint_extractor.cpp)
-add_executable(registration src/registration.cpp)
-add_executable(centroid_estimation src/centroid_estimation.cpp)
-add_executable(correspondence_estimation src/correspondence_estimation.cpp)
+# add_executable(${PROJECT_NAME}_node src/terrapin_csv_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,17 +142,9 @@ add_executable(correspondence_estimation src/correspondence_estimation.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(
-  # ${PROJECT_NAME}_node
-  # ${catkin_LIBRARIES}
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
 # )
-
-target_link_libraries(original ${catkin_LIBRARIES})
-target_link_libraries(filter ${catkin_LIBRARIES})
-target_link_libraries(keypoints ${catkin_LIBRARIES})
-target_link_libraries(registration ${catkin_LIBRARIES})
-target_link_libraries(centroid_estimation ${catkin_LIBRARIES})
-target_link_libraries(correspondence_estimation ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -208,7 +186,7 @@ target_link_libraries(correspondence_estimation ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_terrapin_pcl.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_terrapin_csv.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
