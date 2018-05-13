@@ -11,11 +11,15 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/keypoints/sift_keypoint.h>
+#include <pcl/registration/correspondence_estimation_normal_shooting.h>
+#include <pcl/registration/correspondence_rejection_sample_consensus.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
 using namespace pcl;
+using namespace pcl::registration;
 using namespace pcl_conversions;
 
 // ********************** GLOBALS ***********************************
@@ -43,15 +47,17 @@ const float min_contrast = 0.001f;
 // PCL Operation Objects
 VoxelGrid<PCLPointCloud2> voxel_grid;
 SIFTKeypoint<PointXYZRGB, PointXYZRGB> sift;
+NormalEstimation<PointXYZRGB, PointNormal> normal_est;
+CorrespondenceEstimationNormalShooting<PointXYZRGB, PointXYZRGB, PointNormal, float> corr_est;
+CorrespondenceRejectorSampleConsensus<PointXYZRGB> reject;
+TransformationEstimationSVD<PointXYZRGB, PointXYZRGB> trans_est;
 
 // Previous Cloud Data
 bool previousExists = false;
 PointCloud<PointXYZRGB>::Ptr previous_keypoints (new PointCloud<PointXYZRGB>);
-float x_previous;
-float y_previous;
-float z_previous;
-int previous_cloud_num;
+PointCloud<PointNormal>::Ptr previous_descriptors (new PointCloud<PointNormal>);
 Time previous_timestamp;
+int previous_cloud_num;
 
 
 // ********************** FUNCTIONS ***********************************
@@ -59,7 +65,7 @@ Time previous_timestamp;
 void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   // Publish Message: analyzing cloud
   int current_cloud_num = cloud_msg->header.seq;
-  cout << "Analyzing Cloud: " << current_cloud_num << endl;
+  cout << "Analyzing Cloud: " << cloud_msg->header.seq << endl;
 
   // Publish the original cloud
   originalCloudPub.publish(cloud_msg);
@@ -98,60 +104,73 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
   sift.setMinimumContrast(min_contrast);
   sift.compute(*current_keypoints);
 
+  // Publish Message: Keypoints
   cout << "KEYPOINTS FOUND: " << current_keypoints->points.size() << endl;
 
   // Check if there are enough keypoints before continuing
   if (current_keypoints->points.size() >= keypoint_threshold) {
 
-    // GET POINT CLOUD XYZ CENTROID
-    float x_total = 0;
-    float y_total = 0;
-    float z_total = 0;
-    for (int i = 0; i < current_keypoints->points.size(); i++) {
-      x_total += current_keypoints->points[i].x;
-      y_total += current_keypoints->points[i].y;
-      z_total += current_keypoints->points[i].z;
-    }
-    float x_current = x_total / current_keypoints->points.size();
-    float y_current = y_total / current_keypoints->points.size();
-    float z_current = z_total / current_keypoints->points.size();
+    // CREATE FEATURE DISCRIPTORS
+    // Normal Estimation
+    PointCloud<PointNormal>::Ptr current_descriptors (new PointCloud<PointNormal>);
+    search::KdTree<PointXYZRGB>::Ptr tree_n (new search::KdTree<PointXYZRGB>());
+    normal_est.setInputCloud(current_keypoints);
+    normal_est.setSearchMethod(tree_n);
+    normal_est.setRadiusSearch(0.2);
+    normal_est.compute(*current_descriptors);
 
     // Check if previous cloud exists before continuing
     if (!previousExists) {
       // NO PREVIOUS POINT CLOUD
-      cout << "No Previous Cloud Data Was Found..." << endl;
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
-      x_previous = x_current;
-      y_previous = y_current;
-      z_previous = z_current;
-      previous_cloud_num = current_cloud_num;
+      previous_descriptors->swap(*current_descriptors);
       previous_timestamp = current_timestamp;
       previousExists = true;
+      previous_cloud_num = current_cloud_num;
 
-      // Publish Message: pervious cloud set
-      cout << "Previous Cloud Set" << endl;
     } else {
-      // PREVIOUS POINT CLOUD FOUND
-      cout << "Previous Cloud Found!" << endl;
+      // COMPARE TO PREVIOUS POINT CLOUD
 
-      // COMPARE CENTROIDS
-      float x_diff = x_current - x_previous;
-      float y_diff = y_current - y_previous;
-      float z_diff = z_current - z_previous;
-      float centroid_dist = sqrt(pow(x_diff,2) + pow(y_diff,2) + pow(z_diff,2));
+      // ESTIMATE CORRESPONDENCE
+      CorrespondencesPtr all_correspondences (new Correspondences);
+      search::KdTree<PointXYZRGB>::Ptr corr_tree_source (new search::KdTree<PointXYZRGB>());
+      search::KdTree<PointXYZRGB>::Ptr corr_tree_target (new search::KdTree<PointXYZRGB>());
+      corr_est.setInputSource(current_keypoints);
+      corr_est.setSourceNormals(current_descriptors);
+      corr_est.setInputTarget(previous_keypoints);
+      corr_est.setSearchMethodSource(corr_tree_source);
+      corr_est.setSearchMethodTarget(corr_tree_target);
+      // corr_est.setTargetNormals(previous_descriptors);
+      corr_est.determineReciprocalCorrespondences(*all_correspondences);
+
+      cout << "All Correspondences:" << all_correspondences->size() << endl;
+
+      // CORRESPONDENCE REJECTION
+      CorrespondencesPtr good_correspondences (new Correspondences);
+      reject.setInputSource(current_keypoints);
+      // reject.setSourceNormals(current_descriptors);
+      reject.setInputTarget(previous_keypoints);
+      // reject.setTargetNormals(previous_descriptors);
+      reject.setInputCorrespondences(all_correspondences);
+      reject.getCorrespondences(*good_correspondences);
+      // reject.getRemainingCorrespondences(*all_correspondences, *good_correspondences);
+
+      cout << "Good Correspondences:" << good_correspondences->size() << endl;
+
+      // CALCULATE VELOCITY
+      float avg_dist = 0;
+      for (int i = 0; i < good_correspondences->size(); i++) {
+        avg_dist += good_correspondences->at(i).distance;
+      }
+      avg_dist = avg_dist / good_correspondences->size();
       float time_diff = current_timestamp.toSec() - previous_timestamp.toSec();
-      float velocity = centroid_dist / time_diff;
+      float velocity = avg_dist / time_diff;
 
-      cout << endl;
-      cout << "X diff: " << x_diff << endl;
-      cout << "Y diff: " << y_diff << endl;
-      cout << "Z diff: " << y_diff << endl;
-      cout << endl << "CENTROID DISPLACEMENT: " << centroid_dist << endl;
+      cout << "AVERAGE DISTANCE: " << avg_dist << endl;
       cout << "TIME CHANGE: " << time_diff << endl;
       cout << endl << "VELOCITY: " << velocity << endl;
-
 
       // Publish Velocity data
       std_msgs::Float32 calculated_velocity;
@@ -161,11 +180,8 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       // Publish JSON data
       stringstream json;
       json << "{\"velocity\":" << velocity;
-      json << ",\"displacement\":" << centroid_dist;
+      json << ",\"displacement\":" << avg_dist;
       json << ",\"deltaT\":" << time_diff;
-      json << ",\"deltaX\":" << x_diff;
-      json << ",\"deltaY\":" << y_diff;
-      json << ",\"deltaZ\":" << z_diff;
       json << ",\"previousCloudNum\":" << previous_cloud_num;
       json << ",\"previousTimestamp\":" << previous_timestamp;
       json << ",\"previousNumKeypoints\":" << previous_keypoints->points.size();
@@ -193,11 +209,9 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
 
       // Set previous collections
       previous_keypoints->swap(*current_keypoints);
-      x_previous = x_current;
-      y_previous = y_current;
-      z_previous = z_current;
-      previous_cloud_num = current_cloud_num;
+      previous_descriptors->swap(*current_descriptors);
       previous_timestamp = current_timestamp;
+      previous_cloud_num = current_cloud_num;
     }
   }
   // Publish Message: Done
