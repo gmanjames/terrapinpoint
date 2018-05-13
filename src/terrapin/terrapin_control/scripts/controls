@@ -108,10 +108,20 @@ class Controls:
         # Create tests and test frame
         self.testing = False
 
+        # Test 1
+        # w/t single barrel
         self.test_1 = Test(self)
-        self.test_1.add_step([-0.2,  0.0, 20])
-        self.test_1.add_step([-0.2,  0.4, 9])
-        self.test_1.add_step([-0.2, -0.4, 9])
+        self.test_1.add_step([0.2,  0.0, 20])
+        self.test_1.add_step([0.0,  0.0, 10])
+        self.test_1.add_step([-0.2, 0.0, 20])
+
+
+        # Test 2
+        # w/t single barrel
+        self.test_1 = Test(self)
+        self.test_1.add_step([0.2,   0.1, 20])
+        self.test_1.add_step([0.0,   0.0, 10])
+        self.test_1.add_step([-0.2, -0.1, 20])
 
 
         testFrame = ttk.Frame(content, padding="7 7 7 7")
