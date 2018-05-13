@@ -14,7 +14,7 @@
     <!-- Registration: Compares point clouds -->
     <arg name="run_registration" default="false"  />
     <!-- Centroid Estimation: Compares point clouds -->
-    <arg name="run_centroid_estimation" default="false"  />
+    <arg name="run_centroid_estimation" default="true"  />
     <!-- Correspondence Estimation: Compares point clouds -->
     <arg name="run_correspondence_estimation" default="false"  />
 
