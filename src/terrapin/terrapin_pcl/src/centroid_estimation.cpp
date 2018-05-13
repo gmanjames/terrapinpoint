@@ -141,8 +141,11 @@ void cloud_cb (const PointCloud2ConstPtr& cloud_msg) {
       float y_diff = y_current - y_previous;
       float z_diff = z_current - z_previous;
       float centroid_dist = sqrt(pow(x_diff,2) + pow(y_diff,2) + pow(z_diff,2));
+
+      float previous_dist = sqrt(pow(x_previous,2) + pow(y_previous,2) + pow(z_previous,2));
+      float current_dist = sqrt(pow(x_current,2) + pow(y_current,2) + pow(z_current,2));
       float time_diff = current_timestamp.toSec() - previous_timestamp.toSec();
-      float velocity = centroid_dist / time_diff;
+      float velocity = (previous_dist - current_dist) / time_diff;
 
       cout << endl;
       cout << "X diff: " << x_diff << endl;
