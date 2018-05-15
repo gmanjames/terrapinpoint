@@ -27,7 +27,7 @@ def record_odom_velocity(msg):
     time = msg.header.stamp.secs + (msg.header.stamp.nsecs / 1000000000)
 
     # print(velocity)
-    print(time)
+    # print(time)
     #print(ns)
 
     csvwriter.writerow([time, velocity])

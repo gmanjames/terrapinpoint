@@ -20,7 +20,7 @@
 
     <!-- Record Velocity -->
     <arg name="record_velocity" default="false"  />
-    <arg name="run_simulation" default="false"  />
+    <arg name="run_simulation" default="true"  />
 
 
     <group if="$(arg run_simulation)">
@@ -28,7 +28,7 @@
 	    <!-- Start with the empty_world.launch file -->
 	    <!--  -->
 	    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-		<arg name="world_name"   value="$(find terrapin_pcl)/worlds/terrapin_hydrant.world"/>
+		<arg name="world_name"   value="$(find terrapin_pcl)/worlds/library_trial3.world"/>
 		<arg name="paused"       value="false" />
 		<arg name="use_sim_time" value="true"  />
 		<arg name="gui"          value="true"  />
@@ -90,7 +90,7 @@
     <group if="$(arg record_velocity)">
       <node name="record_odom_velocity" pkg="terrapin_csv" type="record_odom_velocity"
             args="input:=$(arg subscripe_to)" />
-            
+
       <node name="record_calculated_velocity" pkg="terrapin_csv" type="record_calculated_velocity"
             args="input:=$(arg subscripe_to)" />
     </group>
